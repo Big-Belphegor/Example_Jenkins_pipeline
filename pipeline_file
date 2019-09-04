@@ -73,7 +73,8 @@ pipeline {
 
 			steps {
 				echo "======== Production environment release ========"
-				sh "ansible -i ${ANSIBLE_HOSTS_PATH}/hosts -m shell -a 'docker run -d --name tomcat-ems -v /usr/java/jdk1.8.0_111:/usr/local/jdk -p 8080:8080 ${IMAGE_NAME}:${TAG}' node"
+				sh "ansible -i ${ANSIBLE_HOSTS_PATH}/hosts -m shell -a 'docker run -d --name tomcat-ems -v /usr/java/jdk1.8.0_111:/usr/local/jdk
+				-v /data/tomcat-logs:/usr/local/tomcat/logs -p 8080:8080 ${IMAGE_NAME}:${TAG}' node"
 			}
 		}
 		
@@ -85,7 +86,8 @@ pipeline {
 			steps {
 				echo "======== Production environment rollback ========"
 				sh "ansible -i ${ANSIBLE_HOSTS_PATH}/hosts -m shell -a 'docker rm -f tomcat-ems' node"
-				sh "ansible -i ${ANSIBLE_HOSTS_PATH}/hosts -m shell -a 'docker run -d --name tomcat-ems -v /usr/java/jdk1.8.0_111:/usr/local/jdk -p 8080:8080 ${IMAGE_NAME}:${TAG}' node"
+				sh "ansible -i ${ANSIBLE_HOSTS_PATH}/hosts -m shell -a 'docker run -d --name tomcat-ems -v /usr/java/jdk1.8.0_111:/usr/local/jdk
+				-v /data/tomcat-logs:/usr/local/tomcat/logs -p 8080:8080 ${IMAGE_NAME}:${TAG}' node"
 			}
 		}
 	}
