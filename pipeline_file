@@ -1,0 +1,93 @@
+#!groovy
+pipeline {
+	agent any
+	
+	environment {
+		GIT_URL="ssh://git@gitlab.alien.com:2222/alien/ems.git"
+		DOCKE_FILE_PATH="/usr/local/src/jenkins_script/tomcat_with_ems/docker_script"
+        WAR_PATH="${WORKSPACE}/target/ems-2.0.0.war"
+		ANSIBLE_HOSTS_PATH="/usr/local/src/jenkins_script/tomcat_with_ems/ansible_script"
+		IMAGE_NAME="hub.alien.com:8080/ems/ems"
+		TAG="${Version}"
+
+	}
+	
+	stages {
+		stage("Get Code") {
+			steps {
+				echo "======== Get Code ========"
+				deleteDir()
+				git "${GIT_URL}"
+			}
+		}
+			
+		stage("Pack War") {
+			when {
+				environment name:"Status",value:"Deploy"
+			}
+			
+			steps {
+				echo "======== Pack War ========"
+				sh "mvn clean package -Dmaven.test.skip=true"
+			}	
+		}
+		
+        stage("Build and Push image") {
+			when {
+				environment name:"Status",value:"Deploy"
+			}
+			
+			steps {
+				echo "======== Build and Push image ========"
+				sh "${DOCKE_FILE_PATH}/build.sh ${WAR_PATH} ${IMAGE_NAME}:${TAG} ${DOCKE_FILE_PATH}"
+			}
+		}
+
+        stage("Pre-release") {
+			when {
+				environment name:"Status",value:"Deploy"
+			}
+
+			steps {
+				echo "======== Pre-release ========"
+				echo "======== 略过，因为没有测试环境 ========"
+			}
+		}
+			
+		stage("Initialization environment") {
+			when {
+				environment name:"Num",value:"Many times"
+			}
+			
+			steps {
+				echo "======== Initialization environment ========"
+				sh "ansible -i ${ANSIBLE_HOSTS_PATH}/hosts -m shell -a 'docker rm -f tomcat-ems' node"
+			}
+		}
+
+		
+        stage("Production environment release") {
+			when {
+				environment name:"Status",value:"Deploy"
+			}
+
+			steps {
+				echo "======== Production environment release ========"
+				sh "ansible -i ${ANSIBLE_HOSTS_PATH}/hosts -m shell -a 'docker run -d --name tomcat-ems -v /usr/java/jdk1.8.0_111:/usr/local/jdk -p 8080:8080 ${IMAGE_NAME}:${TAG}' node"
+			}
+		}
+		
+        stage("Production environment rollback") {
+			when {
+				environment name:"Status",value:"Rollback"
+			}
+			
+			steps {
+				echo "======== Production environment rollback ========"
+				sh "ansible -i ${ANSIBLE_HOSTS_PATH}/hosts -m shell -a 'docker rm -f tomcat-ems' node"
+				sh "ansible -i ${ANSIBLE_HOSTS_PATH}/hosts -m shell -a 'docker run -d --name tomcat-ems -v /usr/java/jdk1.8.0_111:/usr/local/jdk -p 8080:8080 ${IMAGE_NAME}:${TAG}' node"
+			}
+		}
+	}
+}
+
