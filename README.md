@@ -1,0 +1,3 @@
+pipeline_file 内容添加至Jenkins pipeline项目的pipeline构建部分
+
+tomcat_with_ems 目录下文件为ansible部署节点信息与Docke镜像构建脚本，通过调试pipeline脚本路径执行即可
